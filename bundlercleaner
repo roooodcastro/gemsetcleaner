@@ -1,0 +1,137 @@
+#!/bin/bash --login
+
+# ==============================================================================
+# ==============================================================================
+# Parameter verification
+# ==============================================================================
+# ==============================================================================
+
+# This script is basically a convoluted way to run the command
+# "bundle clean --force", but in a way that allows you to know the amount of
+# disk space cleared after uninstalling the unused gems.
+#
+# If the -q option (quiet) is specified, the output will only be the total
+# amount of space cleared, in kilobytes.
+
+# Reads the -q argument
+verbose=true
+while getopts :q name; do
+    case $name in
+    q)    verbose=false;;
+    ?)    printf "Usage: %s: [-q]\n" $0
+          exit 2;;
+    esac
+done
+
+# Check if required files are present (.ruby-version and Gemfile)
+# The Gemfile is required so that Bundler know which gems it can remove and
+# which gems should remain, and .ruby-version is required for the script to
+# know which RVM directory to check for the difference in size.
+# The .ruby-gemset file is optional, as a project might be using system gems.
+files_not_found=false
+
+if ! [ -f "$PWD/.ruby-version" ]; then
+    if ($verbose == true); then
+        echo $PWD
+        echo "\".ruby-version\" file was not found!"
+    fi
+    files_not_found=true
+fi
+
+if ! [ -f "$PWD/Gemfile" ]; then
+    if ($verbose == true); then
+        echo $PWD
+        echo "\"Gemfile\" file was not found!"
+    fi
+    files_not_found=true
+fi
+
+if ($files_not_found == true); then
+    if ($verbose == true); then
+        echo "One or more required files were not found. Aborting."
+    else
+        echo "0"
+    fi
+    exit 1
+fi
+
+# ==============================================================================
+# ==============================================================================
+# RVM loading
+# ==============================================================================
+# ==============================================================================
+
+# Load RVM into a shell session *as a function*
+if [[ -s "$HOME/.rvm/scripts/rvm" ]] ; then
+    # First try to load from a user install
+    source "$HOME/.rvm/scripts/rvm" > /dev/null
+elif [[ -s "/usr/local/rvm/scripts/rvm" ]] ; then
+    # Then try to load from a root install
+    source "/usr/local/rvm/scripts/rvm" > /dev/null
+elif [[ -s "/usr/share/rvm/bin/rvm" ]] ; then
+    # Then try to load from a https://github.com/rvm/ubuntu_rvm install
+    source "/usr/share/rvm/bin/rvm" > /dev/null
+else
+    printf "ERROR: An RVM installation was not found.\n"
+    exit 0
+fi
+
+# ==============================================================================
+# ==============================================================================
+# Start of cleaning script
+# ==============================================================================
+# ==============================================================================
+
+# Builds the path which will be used to calculate the disk space saved after
+gemset=""
+ruby_version=$(cat "$PWD/.ruby-version")
+
+if [ -f "$PWD/.ruby-gemset" ]; then
+    gemset=$(cat "$PWD/.ruby-gemset")
+fi
+
+if [ -z "$gemset" ]; then
+    gem_path="$HOME/.rvm/gems/ruby-$ruby_version/gems"
+    rvm use $ruby_version > /dev/null
+else
+    gem_path="$HOME/.rvm/gems/ruby-$ruby_version@$gemset/gems"
+    rvm use $ruby_version@$gemset --create > /dev/null
+fi
+
+# Checks if the RVM gem path does really exist
+if ! [ -d "$gem_path" ]; then
+    if ($verbose == true); then
+        echo "Gems not found! Aborting."
+    else
+        echo "0"
+    fi
+    exit 1
+fi
+
+# Calculates the size of the gems before cleaning
+gems_size_before=$(du -s $gem_path | cut -f1)
+
+# Actually runs the "bundle clean --force" command to uninstall unused gems
+if ($verbose == true); then
+    printf "Trying to remove unused gems...\n\n"
+    bundle clean --force
+else
+    bundle clean --force > /dev/null
+fi
+
+# Calculates the size of the gems after cleaning and calculate the difference
+gems_size_after=$(du -s $gem_path | cut -f1)
+
+space_cleared=$((gems_size_before - gems_size_after))
+
+# Prints out final info about space cleared, if quiet mode is not specified
+if ($verbose == true); then
+    if [ $space_cleared -gt 0 ]; then
+        printf "\n$(($space_cleared))K cleared!"
+    else
+        echo "No unused gems found!"
+    fi
+else
+    echo $space_cleared
+fi
+

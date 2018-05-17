@@ -1,0 +1,42 @@
+#! /bin/sh
+
+# Saves the absolute path where this script is located (so we can locate the
+# other script "clean_unused_gems"
+scriptpath="$( cd "$(dirname "$0")" ; pwd -P )"
+
+# Tests if the workspace directory parameter is set
+if [ -z "$1" ]; then
+    echo "Workspace directory not specified! Aborting."
+    exit 1
+fi
+
+# Tests if the workspace directory parameter actually exists
+if ! [ -d "$1" ]; then
+    echo "Workspace directory \"$1\" not found! Aborting."
+    exit 1
+fi
+
+# Goes to the specified workspace directory
+cd $1
+
+projects=$(ls -d */)
+workspace_dir=$PWD
+space_cleared=0
+
+
+# Loops through the projects found in the workspace directory, and execute the
+# clean_unused_gems" script in quiet mode on each of them, summing up the
+# total cleared disk space.
+for project in $projects
+do
+    echo "Cleaning ununsed gems in \"$project\""
+    cd "$workspace_dir/$project"
+    cmd="$scriptpath/clean_unused_gems -q"
+    new_space=$($cmd)
+    space_cleared=$((space_cleared+new_space))
+done
+
+# Prints the final result
+formatted_number=$(echo "$space_cleared" | sed ':a;s/\B[0-9]\{3\}\>/,&/;ta')
+echo "\nCleanup complete! A total of ${formatted_number}kb was saved!"
+
