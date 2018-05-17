@@ -50,7 +50,7 @@ silently return "0" as output.
 
 Example output:
 
-    $ ~/clean_unused_gems
+    $ ~/bundlecleaner
     Trying to remove unused gems...
     
     Removing tilt (2.0.8)
@@ -80,6 +80,7 @@ To execute it:
     
 Example output:
 
+    $ ~/workspacecleaner ~/workspace
     Cleaning ununsed gems in "project_1/"
     Cleaning ununsed gems in "rails/"
     Cleaning ununsed gems in "twitter-bootstrap/"
