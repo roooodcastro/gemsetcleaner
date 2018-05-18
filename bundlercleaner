@@ -127,7 +127,8 @@ space_cleared=$((gems_size_before - gems_size_after))
 # Prints out final info about space cleared, if quiet mode is not specified
 if ($verbose == true); then
     if [ $space_cleared -gt 0 ]; then
-        printf "\n$(($space_cleared))K cleared!"
+        formatted_number=$(echo "$space_cleared" | sed ':a;s/\B[0-9]\{3\}\>/,&/;ta')
+        printf "\nDone! ${formatted_number}kb cleared!\n"
     else
         echo "No unused gems found!"
     fi

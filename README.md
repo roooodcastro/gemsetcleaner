@@ -1,35 +1,32 @@
 # Gemset Cleaner
 
-This is a simple script to uninstall unused gems in your Ruby projects.
-The main goal of this script is to save disk space, as this might be a concern
-if you have installed Linux on a small SSD, for example.
+This is a simple script library for Linux & Ruby users, whose main goal is to
+remove unused gems from the system to save disk space. Saving disk space might
+be a concern if you're using Linux on a small SDD or a small disk partition,
+for example.
 
-Unused gems are gems which are not being used by the application's Gemfile.
-When you update a gem using bundler, it will only install the new version, but
-not uninstall the old one, so you'll end up with both versions of the gem
-installed on your system/gemset. In the long run, you'll end up with many
-unused gems just hogging up disk space.
-
-**Warning**: This will uninstall **all** the gems which are not present in
-the `Gemfile.lock` file, so if you have a standalone gem that you use locally
-but should not be in the Gemfile (for example: the `nexus` gem which is used to
-upload new gems to a Nexus gem repository), these will also be removed.
-Dependencies, however, will remain.
+Unused gems are considered to be gems which are not being used by any configured
+Ruby project. Unused gems are usually the result of upgrading a single gem's
+version, or upgrading the Ruby interpreter version as a whole, in which case a
+whole new *gemset* is created. Both situations leave behind a trail of old and
+unused gems installed on the system.
 
 ## Requirements
 
 1. Linux. This script was not tested and may not work on MacOS systems.
 2. [RVM](https://rvm.io/). There is no Support for [rbenv](http://rbenv.org/)
 (yet).
-3. Having a valid Ruby project with both `Gemfile` and `.ruby-version` files
+3. Valid Ruby projects with `Gemfile`, `.ruby-version` and `.ruby-gemset` files
+   (some are optional depending on the script).
 
 ## Usage
 
-There are two separate scripts, `bundlecleaner` and `workspacecleaner`. The
-first will basically only run the command `bundle clean --force`, while also
-printing some nice things like the amount of space saved. The `workspacecleaner`
-will run `bundlecleaner` for each project in your *workspace* directory, in
-order to clean them all in one go.
+There are 3 separate scripts which should be used individually, and have
+increasing effects on space savings. The first one, `bundlecleaner`, will remove
+unused **gems** from a single project. The second, `workspacecleaner`, will
+remove unused **gems** from all projects within a *workspace* directory. The
+third will remove entire unused **gemsets** from your system, based on what
+gemsets are the projects inside a *workspace* directory using.
 
 ### bundlecleaner
 
@@ -40,8 +37,16 @@ it will only print out the raw number of kilobytes saved. This is intended to
 be used on the `workspacecleaner` script, to be able to add the total space
 saved.
 
+**Warning**: This will uninstall **all** the local gems which are not present in
+the `Gemfile.lock` file, so if you have a standalone gem that you use locally
+but should not be in the Gemfile (for example: the `nexus` gem which is used to
+upload new gems to a Nexus gem repository), these will also be removed.
+Dependencies, however, will remain as expected.
+
+Usage:
+
     $ cd ~/workspace/my-project
-    $ /path_to_bundlecleaner/bundlecleaner
+    $ /path_to_gemsetcleaner/bundlecleaner
     
 For the script to successfully execute, it needs 3 things:
 
@@ -82,7 +87,7 @@ they will just count as having saved 0kb each.
 
 To execute it:
 
-    $ /path_to_workspacecleaner/workspacecleaner path_to_my_workspace
+    $ /path_to_gemsetcleaner/workspacecleaner path_to_my_workspace
     
 Example output:
 
@@ -94,6 +99,40 @@ Example output:
     Cleaning ununsed gems in "project_2/"
 
     Cleanup complete! A total of 15,957kb was saved!
+
+### gemsetcleaner
+
+The `gemsetcleaner` script takes the same parameter as `workspacecleaner`, and
+also assumes that the provided *workspace* directory is where **all** your Ruby
+projects are located. It will check which *gemsets* are being used by each
+project, and compare that with the existing *gemsets* inside the RVM home
+(assumed to be `~/.rvm/gems`). If a *gemset* is found that is not being used by
+any project, it will be removed. The script will ask for confirmation before
+actually deleting anything.
+
+**Warning**: This script assumes that **all** your Ruby projects reside directly
+under a specific, single *workspace* directory. If you have Ruby projects on
+separate *workspace* directories, you shouldn't run this script, as it will
+only check for Ruby projects inside one of the directories, not all of them.
+
+To execute it:
+
+    $ /path_to_gemsetcleaner/gemsetcleaner path_to_my_workspace
+
+Example output:
+
+    $ ~/gemsetcleaner ~/workspace
+    A total of 1 unused gemsets were found:
+
+      01) /home/rodrigo/.rvm/gems/ruby-2.5.1@useless_gemset/
+
+    Are you sure you want to remove these 1 gemsets? (yes/no) yes
+
+    Removing unused gemsets:
+    
+    Removing gemset useless_gemset......
+
+    Done! 166,692kb cleared!
 
 ## Author
 

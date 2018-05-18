@@ -1,0 +1,181 @@
+#! /bin/bash
+
+# ==============================================================================
+# ==============================================================================
+# Functions
+# ==============================================================================
+# ==============================================================================
+
+# Checks if an element is included in an array
+function contains_element() {
+  local e match="$1"
+  shift
+  for e; do [[ "$e" == "$match" ]] && return 0; done
+  return 1
+}
+
+
+# ==============================================================================
+# ==============================================================================
+# Parameter verification
+# ==============================================================================
+# ==============================================================================
+
+# Saves the absolute path where this script is located (so we can locate the
+# other script "bundlercleaner"
+scriptpath="$( cd "$(dirname "$0")" ; pwd -P )"
+
+# Tests if the workspace directory parameter is set
+if [ -z "$1" ]; then
+    echo "Workspace directory not specified! Aborting."
+    exit 1
+fi
+
+# Tests if the workspace directory parameter actually exists
+if ! [ -d "$1" ]; then
+    echo "Workspace directory \"$1\" not found! Aborting."
+    exit 1
+fi
+
+
+# ==============================================================================
+# ==============================================================================
+# RVM loading
+# ==============================================================================
+# ==============================================================================
+
+# Load RVM into a shell session *as a function*
+if [[ -s "$HOME/.rvm/scripts/rvm" ]] ; then
+    # First try to load from a user install
+    source "$HOME/.rvm/scripts/rvm" > /dev/null
+elif [[ -s "/usr/local/rvm/scripts/rvm" ]] ; then
+    # Then try to load from a root install
+    source "/usr/local/rvm/scripts/rvm" > /dev/null
+elif [[ -s "/usr/share/rvm/bin/rvm" ]] ; then
+    # Then try to load from a https://github.com/rvm/ubuntu_rvm install
+    source "/usr/share/rvm/bin/rvm" > /dev/null
+else
+    printf "ERROR: An RVM installation was not found.\n"
+    exit 0
+fi
+
+
+# ==============================================================================
+# ==============================================================================
+# Projects discovery
+# ==============================================================================
+# ==============================================================================
+
+# Goes to the specified workspace directory
+cd $1
+
+# Initializes some variables
+projects=$(ls -d */)
+workspace_dir=$PWD
+existing_gemsets=()
+unused_gemsets=()
+
+# Loops through the projects found in the workspace directory, and find out
+# which ruby version and gemset each one is using, storing this in the
+# "existing_gemsets" array.
+for project in $projects
+do
+    project_dir="$workspace_dir/$project"
+    
+    # Skip this project if it doesn't contain the .ruby-version and .ruby-gemset
+    # files.
+    if ! [ -f "$project_dir/.ruby-version" ] ||
+       ! [ -f "$project_dir/.ruby-gemset" ]; then
+        continue
+    fi
+    
+    ruby_version=$(cat "$project_dir/.ruby-version")
+    ruby_gemset=$(cat "$project_dir/.ruby-gemset")
+    existing_gemset="$HOME/.rvm/gems/ruby-$ruby_version@$ruby_gemset/"
+    
+    existing_gemsets+=($existing_gemset)
+done
+
+
+# ==============================================================================
+# ==============================================================================
+# Existing and unused gemsets discovery
+# ==============================================================================
+# ==============================================================================
+
+# Lists all existing gemsets
+gemsets_home="$HOME/.rvm/gems/*/"
+# Filters gemsets excluding global and non-gemset directories
+gemsets=$(ls -d $gemsets_home | grep -P '.*@(?!global)')
+
+for gemset in $gemsets; do
+    # If an existing gemset is being used for a project, skip this gemset.
+    [[ "${existing_gemsets[@]}" =~ "${gemset}" ]] && continue
+    # If it isn't, add it to the unused list.
+    unused_gemsets+=($gemset)
+done
+
+
+# ==============================================================================
+# ==============================================================================
+# Ask user for confirmation
+# ==============================================================================
+# ==============================================================================
+
+if ! [ ${#unused_gemsets[@]} -gt 0 ]; then
+    echo "No unused gemsets were found, yes!"
+    exit 0
+fi
+
+printf "A total of ${#unused_gemsets[@]} unused gemsets were found:\n\n"
+
+index=0
+for gemset in ${unused_gemsets[@]}; do
+    ((index+=1))
+    formatted_index=$(printf "%02g" $index)
+    echo "  $formatted_index) $gemset"
+done
+
+echo
+read -p "Are you sure you want to remove these ${#unused_gemsets[@]} gemsets? (yes/no) " -r choice
+
+case "$choice" in 
+  y|Y|yes|Yes ) confirm=true;;
+  * ) confirm=false;;
+esac
+
+if [[ $confirm = false ]]; then
+    echo "Fine. Aborted."
+    exit 0
+fi
+
+# ==============================================================================
+# ==============================================================================
+# Removal of ununsed gemsets
+# ==============================================================================
+# ==============================================================================
+
+printf "\nRemoving unused gemsets:\n\n"
+
+# Stores the size of the gems directory prior to removal
+gems_size_before=$(du -s "$HOME/.rvm/gems" | cut -f1)
+
+for gemset in ${unused_gemsets[@]}; do
+    ruby_info=$(echo $gemset | rev | cut -d'/' -f2 | rev)
+    ruby_version=$(echo $ruby_info | cut -d'@' -f1)
+    ruby_gemset=$(echo $ruby_info | cut -d'@' -f2)
+    rvm $ruby_version do rvm --force gemset delete $ruby_gemset
+done
+
+# Stores the size of the gems directory after removal
+gems_size_after=$(du -s "$HOME/.rvm/gems" | cut -f1)
+
+space_cleared=$((gems_size_before - gems_size_after))
+formatted_number=$(echo "$space_cleared" | sed ':a;s/\B[0-9]\{3\}\>/,&/;ta')
+
+if [ $space_cleared -gt 0 ]; then
+    printf "\nDone! ${formatted_number}kb cleared!\n"
+else
+    echo "No gemsets were removed!"
+fi
+
