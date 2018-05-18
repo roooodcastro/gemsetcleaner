@@ -11,6 +11,13 @@ version, or upgrading the Ruby interpreter version as a whole, in which case a
 whole new *gemset* is created. Both situations leave behind a trail of old and
 unused gems installed on the system.
 
+**Tip**: You may think this is not necessary, or maybe overkill, but the amount
+of disk space used by Ruby projects is significant. In the `gemsetcleaner`
+example, the script saved 166MB, and surprisingly, the only gem installed on
+that gemset was Rails (and its dependencies)! Running this script on my machine,
+whose Ubuntu install is roughly 6 months old, cleared a little under 3GB of
+space on unused gems and gemsets alone.
+
 ## Requirements
 
 1. Linux. This script was not tested and may not work on MacOS systems.
