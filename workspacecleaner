@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # Saves the absolute path where this script is located (so we can locate the
-# other script "clean_unused_gems"
+# other script "bundlercleaner"
 scriptpath="$( cd "$(dirname "$0")" ; pwd -P )"
 
 # Tests if the workspace directory parameter is set
@@ -25,13 +25,13 @@ space_cleared=0
 
 
 # Loops through the projects found in the workspace directory, and execute the
-# clean_unused_gems" script in quiet mode on each of them, summing up the
+# "bundlercleaner" script in quiet mode on each of them, summing up the
 # total cleared disk space.
 for project in $projects
 do
     echo "Cleaning ununsed gems in \"$project\""
     cd "$workspace_dir/$project"
-    cmd="$scriptpath/clean_unused_gems -q"
+    cmd="$scriptpath/bundlercleaner -q"
     new_space=$($cmd)
     space_cleared=$((space_cleared+new_space))
 done
