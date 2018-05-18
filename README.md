@@ -1,21 +1,27 @@
 # Gemset Cleaner
 
-This is a simple script to uninstall unused gems in your Rails projects.
-The main goal if this script is to save disk space, for example if you have an
-SSD Linux install.
+This is a simple script to uninstall unused gems in your Ruby projects.
+The main goal of this script is to save disk space, as this might be a concern
+if you have installed Linux on a small SSD, for example.
 
 Unused gems are gems which are not being used by the application's Gemfile.
 When you update a gem using bundler, it will only install the new version, but
-not uninstall the old one, so you'll end up with both gems installed on your
-system/gemset. In the long run, you'll end up with many unused gems just
-hogging up disk space.
+not uninstall the old one, so you'll end up with both versions of the gem
+installed on your system/gemset. In the long run, you'll end up with many
+unused gems just hogging up disk space.
+
+**Warning**: This will uninstall **all** the gems which are not present in
+the `Gemfile.lock` file, so if you have a standalone gem that you use locally
+but should not be in the Gemfile (for example: the `nexus` gem which is used to
+upload new gems to a Nexus gem repository), these will also be removed.
+Dependencies, however, will remain.
 
 ## Requirements
 
 1. Linux. This script was not tested and may not work on MacOS systems.
 2. [RVM](https://rvm.io/). There is no Support for [rbenv](http://rbenv.org/)
 (yet).
-3. Having a valid Rails project with both `Gemfile` and `.ruby-version` files
+3. Having a valid Ruby project with both `Gemfile` and `.ruby-version` files
 
 ## Usage
 
@@ -70,8 +76,8 @@ The *workspace* directory is the directory where you store all of your projects,
 or at least most of them.
 
 This script will then look for all directories inside the *workspace* directory,
-assume they're all Rails projects, and run `bundlecleaner`. If one or more
-directories are not Rails projects, don't worry, as nothing will be executed and
+assume they're all Ruby projects, and run `bundlecleaner`. If one or more
+directories are not Ruby projects, don't worry, as nothing will be executed and
 they will just count as having saved 0kb each.
 
 To execute it:
