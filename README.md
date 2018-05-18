@@ -16,7 +16,8 @@ of disk space used by Ruby projects is significant. In the `gemsetcleaner`
 example, the script saved 166MB, and surprisingly, the only gem installed on
 that gemset was Rails (and its dependencies)! Running this script on my machine,
 whose Ubuntu install is roughly 6 months old, cleared a little under 3GB of
-space on unused gems and gemsets alone.
+space on unused gems and gemsets alone (Ok, I have almost 50 Ruby projects
+downloaded and configured, but still).
 
 ## Requirements
 
