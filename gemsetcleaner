@@ -66,36 +66,44 @@ fi
 # ==============================================================================
 # ==============================================================================
 
-# Goes to the specified workspace directory
-cd $1
-
 # Initializes some variables
-projects=$(ls -d */)
-workspace_dir=$PWD
 existing_gemsets=()
 unused_gemsets=()
 
-# Loops through the projects found in the workspace directory, and find out
-# which ruby version and gemset each one is using, storing this in the
-# "existing_gemsets" array.
-for project in $projects
+echo "Detected project gemsets:"
+for workspace in "$@"
 do
-    project_dir="$workspace_dir/$project"
-    
-    # Skip this project if it doesn't contain the .ruby-version and .ruby-gemset
-    # files.
-    if ! [ -f "$project_dir/.ruby-version" ] ||
-       ! [ -f "$project_dir/.ruby-gemset" ]; then
-        continue
-    fi
-    
-    ruby_version=$(cat "$project_dir/.ruby-version")
-    ruby_gemset=$(cat "$project_dir/.ruby-gemset")
-    existing_gemset="$HOME/.rvm/gems/ruby-$ruby_version@$ruby_gemset/"
-    
-    existing_gemsets+=($existing_gemset)
-done
+    cd $workspace
+    workspace_dir=$PWD
+    projects=$(ls -d */)
+    # Loops through the projects found in the workspace directory, and find out
+    # which ruby version and gemset each one is using, storing this in the
+    # "existing_gemsets" array.
+    for project in $projects
+    do
+        project_dir="$workspace_dir/$project"
+        
+        # Skip this project if it doesn't contain the .ruby-version and .ruby-gemset
+        # files or a Gemfile
+        if ! [ -f "$project_dir/Gemfile" ] ||
+           ! [ -f "$project_dir/.ruby-version" ] ||
+           ! [ -f "$project_dir/.ruby-gemset" ]; then
+            continue
+        fi
+        
+        ruby_version=$(cat "$project_dir/.ruby-version" | grep -oP '\d+\.\d+\.\S+')
+        if [ -z "$ruby_version" ]; then
+            ruby_version=$(cat Gemfile | grep 'ruby ' | grep -oP '\d+\.\d+\.\S+')
+        fi
 
+        ruby_gemset=$(cat "$project_dir/.ruby-gemset")
+        existing_gemset="$HOME/.rvm/gems/ruby-$ruby_version@$ruby_gemset/"
+        echo $existing_gemset
+
+        existing_gemsets+=($existing_gemset)
+    done
+done
+echo ""
 
 # ==============================================================================
 # ==============================================================================
