@@ -91,9 +91,9 @@ do
             continue
         fi
         
-        ruby_version=$(cat "$project_dir/.ruby-version" | grep -oP '\d\.\d\.\d')
+        ruby_version=$(cat "$project_dir/.ruby-version" | grep -oP '\d+\.\d+\.\S+')
         if [ -z "$ruby_version" ]; then
-            ruby_version=$(cat Gemfile | grep 'ruby ' | grep -oP '\d\.\d\.\d')
+            ruby_version=$(cat Gemfile | grep 'ruby ' | grep -oP '\d+\.\d+\.\S+')
         fi
 
         ruby_gemset=$(cat "$project_dir/.ruby-gemset")
