@@ -70,6 +70,7 @@ fi
 existing_gemsets=()
 unused_gemsets=()
 
+echo "Detected project gemsets:"
 for workspace in "$@"
 do
     cd $workspace
@@ -102,6 +103,7 @@ do
         existing_gemsets+=($existing_gemset)
     done
 done
+echo ""
 
 # ==============================================================================
 # ==============================================================================
